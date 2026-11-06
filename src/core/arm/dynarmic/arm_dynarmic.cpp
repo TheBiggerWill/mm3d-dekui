@@ -63,6 +63,7 @@
 #include "mm3d/single_screen_text.h"
 #include "mm3d/stick_controls.h"
 #include "mm3d/simple_cheats.h"
+#include "mm3d/ship_enhancements.h"
 #include "mm3d/prices.h"
 #include "mm3d/menu_sound.h"
 #include "mm3d/music.h"
@@ -410,6 +411,12 @@ public:
             if(process&&process->codeset&&process->codeset->program_id==0x0004000000125500ULL&&MM3D::OwlSword::CodeMatches(code))
                 return MM3D::OwlSword::Instruction(vaddr,*instruction);
         }
+        if(instruction&&MM3D::ShipEnhancements::Instruction(vaddr,*instruction)!=*instruction) {
+            const auto process=parent.system.Kernel().GetCurrentProcess();
+            struct CodeMemory {Memory::MemorySystem& memory;std::optional<u32> Read(u32 at){return memory.Read32OrNullopt(at);}} code{memory};
+            if(process&&process->codeset&&process->codeset->program_id==0x0004000000125500ULL&&MM3D::ShipEnhancements::CodeMatches(code,vaddr))
+                return MM3D::ShipEnhancements::Instruction(vaddr,*instruction);
+        }
         if(instruction&&MM3D::TatlReminders::Instruction(vaddr,*instruction)!=*instruction) {
             const auto process=parent.system.Kernel().GetCurrentProcess();
             struct CodeMemory {Memory::MemorySystem& memory;std::optional<u32> Read(u32 at){return memory.Read32OrNullopt(at);}} code{memory};
@@ -738,6 +745,7 @@ public:
             if(swi==MM3D::StickControls::PadSVC) {
                 stick_controls_hook.Pad(guest,r);
                 MM3D::SimpleCheats::MoonJump(guest);
+                MM3D::ShipEnhancements::Tick(guest);
             }
             else stick_controls_hook.Map(guest,r);
             return;
@@ -767,6 +775,15 @@ public:
                     MM3D::DeathPenalties::advance_six_hours.load(),&death_respawn_sound);
             else
                 death_respawn_sound.SceneInit(guest,parent.jit->Regs());
+            return;
+        }
+        if(swi>=MM3D::ShipEnhancements::FirstSVC&&swi<MM3D::ShipEnhancements::FirstSVC+MM3D::ShipEnhancements::Hooks.size()) {
+            struct Guest {Memory::MemorySystem& memory;
+                std::optional<u32> Read(u32 at){return memory.Read32OrNullopt(at);}
+                void Write(u32 at,u32 value){memory.Write32(at,value);}} guest{memory};
+            u32 cpsr=parent.jit->Cpsr();
+            MM3D::ShipEnhancements::Handle(guest,parent.jit->Regs(),cpsr,swi-MM3D::ShipEnhancements::FirstSVC);
+            parent.jit->SetCpsr(cpsr);
             return;
         }
         if(swi>=MM3D::FastTime::FirstSVC&&swi<MM3D::FastTime::FirstSVC+MM3D::FastTime::Hooks.size()) {

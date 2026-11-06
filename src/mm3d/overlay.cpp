@@ -75,6 +75,7 @@
 #include "mm3d/owl_sword.h"
 #include "mm3d/owl_intro.h"
 #include "mm3d/simple_cheats.h"
+#include "mm3d/ship_enhancements.h"
 #include "mm3d/photo_capture.h"
 #include "mm3d/bomber_approach.h"
 #include "video_core/renderer_vulkan/vk_instance.h"
@@ -109,7 +110,22 @@ void ApplyFrameInterpolation(bool enabled, bool cpu_vertices) {
     LOG_INFO(Render_Vulkan, "Interpolation settings: enabled={} vertex_processing={}",
              enabled, cpu_vertices ? "CPU" : "GPU");
 }
+void ApplyShipOptions(const Settings::ShipOptions& ship) {
+    using namespace ShipEnhancements;
+    infinite_rupees.store(ship.infinite_rupees);
+    unbreakable_razor_sword.store(ship.unbreakable_razor_sword);
+    freeze_time.store(ship.freeze_time);
+    time_moves_when_you_move.store(ship.time_moves_when_you_move);
+    keep_inverted_time.store(ship.keep_inverted_time);
+    fierce_deity_anywhere.store(ship.fierce_deity_anywhere);
+    goron_rolling_ignores_magic.store(ship.goron_rolling_ignores_magic);
+    lower_bank_thresholds.store(ship.lower_bank_thresholds);
+    boss_health_multiplier.store(std::clamp(ship.boss_health_multiplier,1,5));
+    run_speed_percent.store(std::clamp(ship.run_speed_percent,50,300));
+    blast_mask_cooldown_percent.store(std::clamp(ship.blast_mask_cooldown_percent,0,100));
+}
 void ApplyPresentationSettings(const Settings& settings) {
+    ApplyShipOptions(settings.ship);
     ApplyFrameInterpolation(settings.interpolation_60fps, settings.interpolation_cpu_vertices);
     HudAdjustments::Apply(settings.player_hud);
     PlayerHud::ApplyRupeeKeys(settings.rupee_keys);
@@ -1162,6 +1178,42 @@ void Overlay::Draw(vk::CommandBuffer command, vk::Framebuffer framebuffer,
             else if(result.load()==-1)ImGui::TextUnformatted("Not applied: load a supported game save first.");
             else if(result.load()==-2)ImGui::TextUnformatted("Not applied: enter a temple first.");
         };
+        const auto ship_controls=[&] {
+            auto& ship=state.settings.ship;
+            bool changed=false;
+            ImGui::TextWrapped("Options modelled on 2 Ship 2 Harkinian. They apply immediately and are saved with your Dekui settings.");
+            ImGui::SeparatorText("Cheats");
+            changed|=ImGui::Checkbox("Infinite rupees",&ship.infinite_rupees);
+            hover_help("Keeps your wallet full.");
+            changed|=ImGui::Checkbox("Unbreakable Razor Sword",&ship.unbreakable_razor_sword);
+            hover_help("The Razor Sword never dulls back into the Kokiri Sword.");
+            changed|=ImGui::Checkbox("Freeze time",&ship.freeze_time);
+            hover_help("Stops the clock. Songs, sleeping and scripted time changes still move it.");
+            changed|=ImGui::SliderInt("Link's run speed",&ship.run_speed_percent,50,300,"%d%%",ImGuiSliderFlags_AlwaysClamp);
+            hover_help("Top running speed and acceleration in every form. 100% is normal.");
+            ImGui::SeparatorText("Time and cycle");
+            changed|=ImGui::Checkbox("Time moves when you move",&ship.time_moves_when_you_move);
+            hover_help("The clock only runs while Link is moving.");
+            changed|=ImGui::Checkbox("Do not reset time speed",&ship.keep_inverted_time);
+            hover_help("The Inverted Song of Time stays active after you play the Song of Time.");
+            ImGui::SeparatorText("Masks");
+            changed|=ImGui::Checkbox("Fierce Deity's Mask anywhere",&ship.fierce_deity_anywhere);
+            hover_help("Fierce Deity's Mask can be put on outside boss rooms.");
+            changed|=ImGui::SliderInt("Blast Mask cooldown",&ship.blast_mask_cooldown_percent,0,100,"%d%%",ImGuiSliderFlags_AlwaysClamp);
+            hover_help("Wait before the Blast Mask can explode again. 100% is normal, 0% is none.");
+            changed|=ImGui::Checkbox("Goron rolling ignores magic",&ship.goron_rolling_ignores_magic);
+            hover_help("Spiked Goron rolling doesn't use up magic.");
+            ImGui::SeparatorText("Difficulty");
+            changed|=ImGui::SliderInt("Boss health",&ship.boss_health_multiplier,1,5,"%dx",ImGuiSliderFlags_AlwaysClamp);
+            hover_help("Odolwa, Goht, Gyorg, Twinmold, Wart and Majora take this many times more damage to defeat. Damage you take is under Difficulty.");
+            changed|=ImGui::Checkbox("Lower bank reward thresholds",&ship.lower_bank_thresholds);
+            hover_help("The bank's 1,000 and 5,000 rupee rewards are given at 500 and 1,000 rupees. The 200 rupee wallet reward is unchanged.");
+            if(ImGui::Button("Reset 2Ship options")){ship=Settings::ShipOptions{};changed=true;}
+            if(changed) {
+                ApplyShipOptions(ship);
+                state.status=state.settings.Save(state.directory+"presentation.json")?"2Ship options saved":"2Ship options save FAILED";
+            }
+        };
         const auto restoration_controls=[&] {
             if(ImGui::Checkbox("Bombers don't approach automatically",&state.settings.disable_bomber_approach)) {
                 BomberApproach::disabled.store(state.settings.disable_bomber_approach);
@@ -1259,6 +1311,7 @@ void Overlay::Draw(vk::CommandBuffer command, vk::Framebuffer framebuffer,
             if(ImGui::BeginTabItem("Difficulty")){difficulty_controls();ImGui::EndTabItem();}
             if(ImGui::BeginTabItem("Restoration")){restoration_controls();ImGui::EndTabItem();}
             if(ImGui::BeginTabItem("QOL")){qol_controls();ImGui::EndTabItem();}
+            if(ImGui::BeginTabItem("2Ship")){ship_controls();ImGui::EndTabItem();}
 #ifndef __ANDROID__
             // Opt-in support tools for packaged builds. Never persist this flag in
             // presentation.json or expose the editor's game-modifying controls.
@@ -1471,6 +1524,7 @@ void Overlay::Draw(vk::CommandBuffer command, vk::Framebuffer framebuffer,
         }
         if(ImGui::BeginTabItem("Restoration")){restoration_controls();ImGui::EndTabItem();}
         if(ImGui::BeginTabItem("QOL")){qol_controls();ImGui::EndTabItem();}
+        if(ImGui::BeginTabItem("2Ship")){ship_controls();ImGui::EndTabItem();}
             if(ImGui::BeginTabItem("Cheats")){cheats_controls();ImGui::EndTabItem();}
         if(ImGui::BeginTabItem("Editor")) {
         ImGui::TextUnformatted("MM3D presentation editor");

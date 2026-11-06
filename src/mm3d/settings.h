@@ -81,6 +81,14 @@ struct Settings {
     bool classic_double_time = false;
     bool sword_activate_owls = false;
     bool disable_bomber_approach = false;
+    // Options modelled on 2 Ship 2 Harkinian (see ship_enhancements.h)
+    struct ShipOptions {
+        bool infinite_rupees = false, unbreakable_razor_sword = false, freeze_time = false;
+        bool time_moves_when_you_move = false, keep_inverted_time = false;
+        bool fierce_deity_anywhere = false, goron_rolling_ignores_magic = false;
+        bool lower_bank_thresholds = false;
+        int boss_health_multiplier = 1, run_speed_percent = 100, blast_mask_cooldown_percent = 100;
+    } ship;
     float dialogue_scale = 1.f;
     float dialogue_y = 0.f;
     float dialogue_background_width = 1.f;
