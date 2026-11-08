@@ -33,7 +33,6 @@ inline std::atomic<bool> keep_inverted_time{false};       // "Do not reset time 
 inline std::atomic<bool> fierce_deity_anywhere{false};
 inline std::atomic<bool> goron_rolling_ignores_magic{false};
 inline std::atomic<bool> lower_bank_thresholds{false};
-inline std::atomic<int> boss_health_multiplier{1};       // 1..5
 inline std::atomic<int> run_speed_percent{100};          // 50..300
 inline std::atomic<int> blast_mask_cooldown_percent{100}; // 0..100
 
@@ -57,31 +56,27 @@ constexpr U32 PlayerBlastMaskTimer = 0x11ec8; // u16, set to 310 when the mask e
 // ---- instruction hooks
 constexpr U32 FirstSVC = 0xfff700;
 struct Hook { U32 pc, word; };
-enum HookIndex : U32 { FierceDeityButton, FierceDeityButton2, ApplyDamage,
+enum HookIndex : U32 { FierceDeityButton, FierceDeityButton2,
     BankThreshold1000a, BankThreshold1000b, BankThreshold5000, HookCount };
 inline constexpr std::array<Hook, HookCount> Hooks{{
     // Item-button update: Fierce Deity's Mask is enabled only in the four boss rooms and on
     // the Moon (scenes 0x1f, 0x44, 0x5f, 0x36, 0x0b). Two passes over the C buttons.
     {0x1b0b74, 0x1affffd9}, // BNE 0x1b0ae0 (not a boss room: native dimming checks)
     {0x1b1370, 0x0a000005}, // BEQ 0x1b138c (boss room: enable)
-    // Actor_ApplyDamage(actor): health (u8 +0xbb) -= damage (u8 +0xbc), clamped at 0
-    {0x2287b0, 0xe5d020bb}, // LDRB r2,[r0,#0xbb]
     // En_Ginko_Man deposit rewards at 200 / 1000 / 5000 rupees
     {0x426ad0, 0xe3520ffa}, // CMP r2,#1000 (balance)
     {0x426ae0, 0xe3510ffa}, // CMP r1,#1000 (balance before the deposit)
     {0x426af4, 0xe59fc590}, // LDR r12,=5000
 }};
-inline constexpr std::array<std::pair<U32, U32>, 40> Guards{{
+inline constexpr std::array<std::pair<U32, U32>, 33> Guards{{
     {0x1b0b58,0xe1da04f8},{0x1b0b5c,0xe350001f},{0x1b0b60,0x13500044},{0x1b0b64,0x0a000003},
     {0x1b0b68,0xe350005f},{0x1b0b6c,0x13500036},{0x1b0b70,0x1350000b},{0x1b0b78,0xe0870008},
     {0x1b1354,0xe1da24f8},{0x1b1358,0xe352001f},{0x1b135c,0x13520044},{0x1b1360,0x0a000009},
     {0x1b1364,0xe352005f},{0x1b1368,0x13520036},{0x1b136c,0x1352000b},
-    {0x2287b4,0xe5d010bc},{0x2287b8,0xe1520001},{0x2287bc,0x93a01000},{0x2287c0,0x80421001},
-    {0x2287c4,0xe5c010bb},{0x2287c8,0xe20100ff},{0x2287cc,0xe12fff1e},
     {0x426aa4,0xe5903230},{0x426aa8,0xe6ff2073},{0x426aac,0xe35200c8},{0x426ab0,0x3a000006},
     {0x426ab8,0xe1d711fe},{0x426abc,0xe35100c8},{0x426ad4,0x3a000046},{0x426adc,0xe1d711fe},
     {0x426ae4,0xaa000002},{0x426af8,0xe152000c},{0x426afc,0x3a00003c},{0x426b00,0xe151000c},
-    {0x427088,0x007760d8},{0x42708c,5000},
+    {0x427088,0x007761d8},{0x42708c,5000},
     {0x1f1190,0xe1c343ba},{0x1f11e8,0xe1c346be},{0x1f1260,StaticContextPtr},{0x1f1268,0x11db0},
 }};
 inline U32 Instruction(U32 pc, U32 word) {
@@ -106,37 +101,12 @@ constexpr U32 CompareFlags(U32 cpsr, U32 a, U32 b) {
 }
 constexpr bool ZeroFlag(U32 cpsr) { return (cpsr >> 30) & 1; }
 
-// Main bosses: Odolwa, Twinmold, Gyorg, Wart (Boss_04), Majora, Goht.
-constexpr bool IsBoss(U32 id) {
-    return id == 0xcb || id == 0xcc || id == 0xcd || id == 0xce || id == 0xd1 || id == 0x16e;
-}
-// Damage that is not yet big enough to remove a whole unit of a multiplied boss's health,
-// per actor. Health is a byte, so the multiplier divides the damage instead of raising it.
-struct DamageCarry {
-    std::array<std::pair<U32, U32>, 16> slots{};
-    std::size_t next = 0;
-    U32 Take(U32 actor, U32 damage, U32 multiplier) {
-        std::pair<U32, U32>* slot = nullptr;
-        for (auto& s : slots)
-            if (s.first == actor) slot = &s;
-        if (!slot) {
-            slot = &slots[next];
-            next = (next + 1) % slots.size();
-            *slot = {actor, 0};
-        }
-        const U32 total = slot->second + damage;
-        slot->second = total % multiplier;
-        return total / multiplier;
-    }
-};
-inline DamageCarry damage_carry;
-
 template <class M> std::optional<U32> Get(M& m, U32 at, unsigned bytes) { return SimpleCheats::Get(m, at, bytes); }
 template <class M> void Set(M& m, U32 at, U32 value, unsigned bytes) { SimpleCheats::Set(m, at, value, bytes); }
 
 // The SVC handler. regs: r0-r15; cpsr in/out.
 template <class M, class Registers>
-void Handle(M& m, Registers& r, U32& cpsr, U32 index) {
+void Handle([[maybe_unused]] M& m, Registers& r, U32& cpsr, U32 index) {
     switch (index) {
     case FierceDeityButton: // BNE 0x1b0ae0
         r[15] = fierce_deity_anywhere || ZeroFlag(cpsr) ? 0x1b0b78 : 0x1b0ae0;
@@ -144,23 +114,6 @@ void Handle(M& m, Registers& r, U32& cpsr, U32 index) {
     case FierceDeityButton2: // BEQ 0x1b138c
         r[15] = fierce_deity_anywhere || ZeroFlag(cpsr) ? 0x1b138c : 0x1b1374;
         return;
-    case ApplyDamage: {
-        // Replays the whole native routine, then returns to the caller.
-        const U32 actor = r[0];
-        const U32 health = Get(m, actor + 0xbb, 1).value_or(0);
-        U32 damage = Get(m, actor + 0xbc, 1).value_or(0);
-        const int multiplier = std::clamp(boss_health_multiplier.load(), 1, 5);
-        if (multiplier > 1 && damage > 0 && IsBoss(Get(m, actor, 2).value_or(0)))
-            damage = damage_carry.Take(actor, damage, U32(multiplier));
-        const U32 result = health > damage ? health - damage : 0;
-        Set(m, actor + 0xbb, result, 1);
-        cpsr = CompareFlags(cpsr, health, damage);
-        r[1] = result;
-        r[2] = health;
-        r[0] = result & 255;
-        r[15] = r[14];
-        return;
-    }
     case BankThreshold1000a:
         cpsr = CompareFlags(cpsr, r[2], lower_bank_thresholds ? 500 : 1000);
         r[15] = Hooks[index].pc + 4;
@@ -319,6 +272,5 @@ template <class M> void Tick(M& m) {
 
 inline void Reset() {
     frame = FrameState{};
-    damage_carry = DamageCarry{};
 }
 } // namespace MM3D::ShipEnhancements

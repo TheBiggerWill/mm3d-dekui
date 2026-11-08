@@ -120,7 +120,6 @@ void ApplyShipOptions(const Settings::ShipOptions& ship) {
     fierce_deity_anywhere.store(ship.fierce_deity_anywhere);
     goron_rolling_ignores_magic.store(ship.goron_rolling_ignores_magic);
     lower_bank_thresholds.store(ship.lower_bank_thresholds);
-    boss_health_multiplier.store(std::clamp(ship.boss_health_multiplier,1,5));
     run_speed_percent.store(std::clamp(ship.run_speed_percent,50,300));
     blast_mask_cooldown_percent.store(std::clamp(ship.blast_mask_cooldown_percent,0,100));
 }
@@ -1203,9 +1202,7 @@ void Overlay::Draw(vk::CommandBuffer command, vk::Framebuffer framebuffer,
             hover_help("Wait before the Blast Mask can explode again. 100% is normal, 0% is none.");
             changed|=ImGui::Checkbox("Goron rolling ignores magic",&ship.goron_rolling_ignores_magic);
             hover_help("Spiked Goron rolling doesn't use up magic.");
-            ImGui::SeparatorText("Difficulty");
-            changed|=ImGui::SliderInt("Boss health",&ship.boss_health_multiplier,1,5,"%dx",ImGuiSliderFlags_AlwaysClamp);
-            hover_help("Odolwa, Goht, Gyorg, Twinmold, Wart and Majora take this many times more damage to defeat. Damage you take is under Difficulty.");
+            ImGui::SeparatorText("Timesavers");
             changed|=ImGui::Checkbox("Lower bank reward thresholds",&ship.lower_bank_thresholds);
             hover_help("The bank's 1,000 and 5,000 rupee rewards are given at 500 and 1,000 rupees. The 200 rupee wallet reward is unchanged.");
             if(ImGui::Button("Reset 2Ship options")){ship=Settings::ShipOptions{};changed=true;}

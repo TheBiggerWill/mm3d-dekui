@@ -87,7 +87,7 @@ struct Settings {
         bool time_moves_when_you_move = false, keep_inverted_time = false;
         bool fierce_deity_anywhere = false, goron_rolling_ignores_magic = false;
         bool lower_bank_thresholds = false;
-        int boss_health_multiplier = 1, run_speed_percent = 100, blast_mask_cooldown_percent = 100;
+        int run_speed_percent = 100, blast_mask_cooldown_percent = 100;
     } ship;
     float dialogue_scale = 1.f;
     float dialogue_y = 0.f;

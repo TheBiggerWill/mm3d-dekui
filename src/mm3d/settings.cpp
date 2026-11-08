@@ -182,7 +182,6 @@ bool Settings::Load(const QString& path) {
     ship.fierce_deity_anywhere=object.value("ship_fierce_deity_anywhere").toBool(false);
     ship.goron_rolling_ignores_magic=object.value("ship_goron_rolling_ignores_magic").toBool(false);
     ship.lower_bank_thresholds=object.value("ship_lower_bank_thresholds").toBool(false);
-    ship.boss_health_multiplier=int(std::lround(value("ship_boss_health_multiplier",1.f,1.f,5.f)));
     ship.run_speed_percent=int(std::lround(value("ship_run_speed_percent",100.f,50.f,300.f)));
     ship.blast_mask_cooldown_percent=int(std::lround(value("ship_blast_mask_cooldown_percent",100.f,0.f,100.f)));
     sword_activate_owls=object.value("sword_activate_owls").toBool(false);
@@ -659,7 +658,6 @@ bool Settings::Save(const QString& path) const {
     object.insert("ship_fierce_deity_anywhere",ship.fierce_deity_anywhere);
     object.insert("ship_goron_rolling_ignores_magic",ship.goron_rolling_ignores_magic);
     object.insert("ship_lower_bank_thresholds",ship.lower_bank_thresholds);
-    object.insert("ship_boss_health_multiplier",ship.boss_health_multiplier);
     object.insert("ship_run_speed_percent",ship.run_speed_percent);
     object.insert("ship_blast_mask_cooldown_percent",ship.blast_mask_cooldown_percent);
     object.insert("disable_tatl_reminders",disable_tatl_reminders);

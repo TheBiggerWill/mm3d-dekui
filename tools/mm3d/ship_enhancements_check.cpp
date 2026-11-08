@@ -37,7 +37,7 @@ Memory Fixture() {
 void Off() {
     infinite_rupees = unbreakable_razor_sword = freeze_time = time_moves_when_you_move = false;
     keep_inverted_time = fierce_deity_anywhere = goron_rolling_ignores_magic = lower_bank_thresholds = false;
-    boss_health_multiplier = 1; run_speed_percent = 100; blast_mask_cooldown_percent = 100;
+    run_speed_percent = 100; blast_mask_cooldown_percent = 100;
     Reset();
 }
 int main() {
@@ -68,28 +68,6 @@ int main() {
         fierce_deity_anywhere = true; cpsr = 0;
         Handle(m, r, cpsr, FierceDeityButton); assert(r[15] == 0x1b0b78);
         Handle(m, r, cpsr, FierceDeityButton2); assert(r[15] == 0x1b138c);
-    }
-    // Actor_ApplyDamage replay
-    {
-        Off(); auto m = Fixture(); std::array<U32, 16> r{}; U32 cpsr = 0;
-        constexpr U32 Actor = 0x9400000;
-        for (U32 a = Actor; a < Actor + 0xc0; a += 4) m.words[a] = 0;
-        auto hit = [&](U32 id, U32 health, U32 damage) {
-            SC::Set(m, Actor, id, 2); SC::Set(m, Actor + 0xbb, health, 1); SC::Set(m, Actor + 0xbc, damage, 1);
-            r[0] = Actor; r[14] = 0x123456; Handle(m, r, cpsr, ApplyDamage);
-            assert(r[15] == 0x123456 && r[0] == SC::Get(m, Actor + 0xbb, 1));
-            return r[0];
-        };
-        assert(hit(0xcb, 20, 2) == 18);
-        assert(hit(0xcb, 2, 5) == 0);
-        assert(hit(0x10, 3, 3) == 0);
-        boss_health_multiplier = 3;
-        assert(hit(0x10, 10, 2) == 8);   // not a boss
-        assert(hit(0xcb, 20, 2) == 20);  // 2/3 carried
-        assert(hit(0xcb, 20, 2) == 19);  // 4/3 -> 1, 1 carried
-        assert(hit(0xcb, 19, 2) == 18);  // 3/3 -> 1
-        assert(hit(0x16e, 30, 9) == 27);
-        assert(hit(0xd1, 1, 6) == 0);
     }
     // Bank thresholds
     {
