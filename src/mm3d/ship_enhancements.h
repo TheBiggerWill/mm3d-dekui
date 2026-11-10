@@ -33,6 +33,7 @@ inline std::atomic<bool> keep_inverted_time{false};       // "Do not reset time 
 inline std::atomic<bool> fierce_deity_anywhere{false};
 inline std::atomic<bool> goron_rolling_ignores_magic{false};
 inline std::atomic<bool> lower_bank_thresholds{false};
+inline std::atomic<bool> moon_jump{false};               // hold L + ZR to rise
 inline std::atomic<int> run_speed_percent{100};          // 50..300
 inline std::atomic<int> blast_mask_cooldown_percent{100}; // 0..100
 
@@ -52,6 +53,9 @@ constexpr U32 StaticRunAccel = 0x3a, StaticRunSpeed = 0x6e; // u16 copies of the
 constexpr U32 PlayerSpeedXZ = 0x70;        // float (Actor::vel_xz)
 constexpr U32 PlayerFlags3 = 0x11db8, GoronRollingFast = 0x80000;
 constexpr U32 PlayerBlastMaskTimer = 0x11ec8; // u16, set to 310 when the mask explodes
+// Buttons in the game's pad state (0x72a008): L 0x200, ZR 0x8000. Restoration uses ZR only
+// together with A, X or Y, so L + ZR is free.
+constexpr U32 MoonJumpChord = 0x8200;
 
 // ---- instruction hooks
 constexpr U32 FirstSVC = 0xfff700;
@@ -181,6 +185,8 @@ template <class M> void Tick(M& m) {
     const bool player_ok = player && *player >= 0x100000 && *player <= 0x3ffe0000 && !(*player & 3) &&
                            (m.Read(*player).value_or(0) & 0xffffff) == 0x020000;
     const auto now = steady_clock::now();
+
+    if (moon_jump) SimpleCheats::Rise(m, MoonJumpChord);
 
     // Wallet / Razor Sword
     if (infinite_rupees) {

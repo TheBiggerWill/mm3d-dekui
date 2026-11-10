@@ -75,6 +75,7 @@
 #include "mm3d/owl_sword.h"
 #include "mm3d/owl_intro.h"
 #include "mm3d/simple_cheats.h"
+#include "mm3d/save_editor_ui.h"
 #include "mm3d/ship_enhancements.h"
 #include "mm3d/photo_capture.h"
 #include "mm3d/bomber_approach.h"
@@ -120,6 +121,7 @@ void ApplyShipOptions(const Settings::ShipOptions& ship) {
     fierce_deity_anywhere.store(ship.fierce_deity_anywhere);
     goron_rolling_ignores_magic.store(ship.goron_rolling_ignores_magic);
     lower_bank_thresholds.store(ship.lower_bank_thresholds);
+    moon_jump.store(ship.moon_jump);
     run_speed_percent.store(std::clamp(ship.run_speed_percent,50,300));
     blast_mask_cooldown_percent.store(std::clamp(ship.blast_mask_cooldown_percent,0,100));
 }
@@ -1190,6 +1192,8 @@ void Overlay::Draw(vk::CommandBuffer command, vk::Framebuffer framebuffer,
             hover_help("Stops the clock. Songs, sleeping and scripted time changes still move it.");
             changed|=ImGui::SliderInt("Link's run speed",&ship.run_speed_percent,50,300,"%d%%",ImGuiSliderFlags_AlwaysClamp);
             hover_help("Top running speed and acceleration in every form. 100% is normal.");
+            changed|=ImGui::Checkbox("Moon jump (hold L + ZR)",&ship.moon_jump);
+            hover_help("Hold L and ZR to float upwards; let go to fall normally. Inactive while paused, in cutscenes and during locked actions.");
             ImGui::SeparatorText("Time and cycle");
             changed|=ImGui::Checkbox("Time moves when you move",&ship.time_moves_when_you_move);
             hover_help("The clock only runs while Link is moving.");
@@ -1309,6 +1313,7 @@ void Overlay::Draw(vk::CommandBuffer command, vk::Framebuffer framebuffer,
             if(ImGui::BeginTabItem("Restoration")){restoration_controls();ImGui::EndTabItem();}
             if(ImGui::BeginTabItem("QOL")){qol_controls();ImGui::EndTabItem();}
             if(ImGui::BeginTabItem("2Ship")){ship_controls();ImGui::EndTabItem();}
+            if(ImGui::BeginTabItem("Save Editor")){SaveEditor::Draw(hover_help);ImGui::EndTabItem();}
 #ifndef __ANDROID__
             // Opt-in support tools for packaged builds. Never persist this flag in
             // presentation.json or expose the editor's game-modifying controls.
@@ -1522,6 +1527,7 @@ void Overlay::Draw(vk::CommandBuffer command, vk::Framebuffer framebuffer,
         if(ImGui::BeginTabItem("Restoration")){restoration_controls();ImGui::EndTabItem();}
         if(ImGui::BeginTabItem("QOL")){qol_controls();ImGui::EndTabItem();}
         if(ImGui::BeginTabItem("2Ship")){ship_controls();ImGui::EndTabItem();}
+        if(ImGui::BeginTabItem("Save Editor")){SaveEditor::Draw(hover_help);ImGui::EndTabItem();}
             if(ImGui::BeginTabItem("Cheats")){cheats_controls();ImGui::EndTabItem();}
         if(ImGui::BeginTabItem("Editor")) {
         ImGui::TextUnformatted("MM3D presentation editor");

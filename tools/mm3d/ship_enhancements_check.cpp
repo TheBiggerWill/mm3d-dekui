@@ -37,6 +37,7 @@ Memory Fixture() {
 void Off() {
     infinite_rupees = unbreakable_razor_sword = freeze_time = time_moves_when_you_move = false;
     keep_inverted_time = fierce_deity_anywhere = goron_rolling_ignores_magic = lower_bank_thresholds = false;
+    moon_jump = false;
     run_speed_percent = 100; blast_mask_cooldown_percent = 100;
     Reset();
 }
@@ -147,6 +148,31 @@ int main() {
         // Option off: never restored
         keep_inverted_time = false; set(-1, 3, 0x2000); set(0, 1, 0x4000);
         assert(*m.Read(SaveExtraTimeSpeed) == 0);
+    }
+    // Moon jump: L + ZR sets upward velocity; L or ZR alone, or the option off, does nothing.
+    {
+        Off();
+        auto m = Fixture();
+        m.words[0x72a008] = 0;
+        m.words[Player + 0x11db0] = 0;
+        m.words[Player + 0x68] = std::bit_cast<U32>(-3.f);
+        const auto rise = [&](U32 buttons) {
+            m.words[0x72a008] = buttons;
+            m.words[Player + 0x68] = std::bit_cast<U32>(-3.f);
+            Tick(m);
+            return std::bit_cast<float>(m.words[Player + 0x68]);
+        };
+        assert(rise(MoonJumpChord) == -3.f); // option off
+        moon_jump = true;
+        assert(rise(MoonJumpChord) == 12.f);
+        assert(rise(MoonJumpChord | 0x1) == 12.f);
+        assert(rise(0x200) == -3.f && rise(0x8000) == -3.f && rise(0x201) == -3.f);
+        m.words[Player + 0x11db0] = 0x80; // locked action
+        assert(rise(MoonJumpChord) == -3.f);
+        m.words[Player + 0x11db0] = 0;
+        m.words[Game + 0xaac] = 1;        // paused
+        assert(rise(MoonJumpChord) == -3.f);
+        moon_jump = false;
     }
     std::cout << "ship enhancements: ok\n";
     return 0;

@@ -103,10 +103,10 @@ template<class M> void FillMagic(M& m) {
 // Called from Restoration's guarded pad-update hook, once per game update.
 // The slow general cheat timer is unsuitable for a steady ascent. Only change
 // vertical velocity: releasing the chord leaves native gravity/collision intact.
-template<class M> void MoonJump(M& m) {
-    if(!moon_jump || !CodeMatches(m) || !InGame(m))return;
+template<class M> void Rise(M& m,U32 chord) {
+    if(!CodeMatches(m) || !InGame(m))return;
     const auto buttons=m.Read(0x72a008);
-    if(!buttons || (*buttons&0x201)!=0x201)return; // L + A
+    if(!buttons || (*buttons&chord)!=chord)return;
     const auto context=m.Read(0x72f5c0),game=m.Read(*context+0x16c);
     const auto pause=Get(m,*game+0xaac,2),player=m.Read(*game+0x20dc);
     if(!pause || (*pause&3) || !player || *player<0x100000 || *player>0x3ffe0000 || (*player&3))return;
@@ -114,6 +114,9 @@ template<class M> void MoonJump(M& m) {
     if(!id || (*id&0xffffff)!=0x020000 || !flags || (*flags&0x30800081) || !speed ||
        !std::isfinite(std::bit_cast<float>(*speed)) || Get(m,0x775314,2).value_or(0)==0)return;
     m.Write(*player+0x68,std::bit_cast<U32>(12.f));
+}
+template<class M> void MoonJump(M& m) {
+    if(moon_jump)Rise(m,0x201); // L + A
 }
 template<class M> void Apply(M& m,Action action) {
     switch(action) {

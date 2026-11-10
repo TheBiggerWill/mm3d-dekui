@@ -63,6 +63,7 @@
 #include "mm3d/single_screen_text.h"
 #include "mm3d/stick_controls.h"
 #include "mm3d/simple_cheats.h"
+#include "mm3d/save_editor.h"
 #include "mm3d/ship_enhancements.h"
 #include "mm3d/prices.h"
 #include "mm3d/menu_sound.h"
@@ -745,6 +746,8 @@ public:
             if(swi==MM3D::StickControls::PadSVC) {
                 stick_controls_hook.Pad(guest,r);
                 MM3D::SimpleCheats::MoonJump(guest);
+                // A clock edit must not look like a tick to 2Ship's time options.
+                if(MM3D::SaveEditor::Tick(guest))MM3D::ShipEnhancements::frame.last_time.reset();
                 MM3D::ShipEnhancements::Tick(guest);
             }
             else stick_controls_hook.Map(guest,r);

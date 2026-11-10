@@ -86,7 +86,7 @@ struct Settings {
         bool infinite_rupees = false, unbreakable_razor_sword = false, freeze_time = false;
         bool time_moves_when_you_move = false, keep_inverted_time = false;
         bool fierce_deity_anywhere = false, goron_rolling_ignores_magic = false;
-        bool lower_bank_thresholds = false;
+        bool lower_bank_thresholds = false, moon_jump = false;
         int run_speed_percent = 100, blast_mask_cooldown_percent = 100;
     } ship;
     float dialogue_scale = 1.f;
